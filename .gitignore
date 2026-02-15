@@ -1,0 +1,6 @@
+venv/
+*.pyc
+__pycache__/
+*.pkl
+data/train_data.csv
+.env
