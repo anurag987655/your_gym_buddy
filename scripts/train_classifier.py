@@ -7,12 +7,17 @@ import pickle
 import os
 
 def train_model():
-    csv_path = "/home/anurag/Desktop/your_gym_buddy/data/train_data.csv"
+    # Get the project root directory (Desktop/your_gym_buddy)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    csv_path = os.path.join(project_root, "data", "processed", "pose_data.csv")
+    
     if not os.path.exists(csv_path):
         print(f"Error: {csv_path} not found. Run extract_landmarks.py first.")
         return
 
     # Load data
+    print(f"Loading data from {csv_path}...")
     df = pd.read_csv(csv_path)
     X = df.drop('label', axis=1)
     y = df['label']
@@ -32,9 +37,11 @@ def train_model():
     # Evaluate
     y_pred = clf.predict(X_test)
     print(f"Accuracy: {accuracy_score(y_test, y_pred):.2f}")
+    print("\nClassification Report:")
+    print(classification_report(y_test, y_pred, target_names=le.classes_))
     
     # Save model and label encoder
-    model_dir = "/home/anurag/Desktop/your_gym_buddy/models"
+    model_dir = os.path.join(project_root, "models")
     os.makedirs(model_dir, exist_ok=True)
     
     with open(os.path.join(model_dir, "pose_classifier.pkl"), 'wb') as f:

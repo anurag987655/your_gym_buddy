@@ -2,5 +2,5 @@ mediapipe
 opencv-python
 pandas
 scikit-learn
-google-generativeai
 numpy
+groq

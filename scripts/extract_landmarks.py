@@ -26,13 +26,20 @@ def extract_landmarks_from_image(image_path):
 def process_dataset():
     data = []
     
-    # Define paths based on your environment
+    # Get the project root directory (Desktop/your_gym_buddy)
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    base_raw_path = os.path.join(project_root, "data", "raw")
+    
     datasets = {
-        "squat_good": "/home/anurag/Desktop/Dataset/train/Good",
-        "squat_bad_back": "/home/anurag/Desktop/Dataset/train/Bad back",
-        "squat_bad_heel": "/home/anurag/Desktop/Dataset/train/Bad heel",
-        "downdog": "/home/anurag/Desktop/yoga_posture/DATASET/TRAIN/downdog",
-        "tree": "/home/anurag/Desktop/yoga_posture/DATASET/TRAIN/tree"
+        "squat_good": os.path.join(base_raw_path, "squat_good"),
+        "squat_bad_back": os.path.join(base_raw_path, "squat_bad_back"),
+        "squat_bad_heel": os.path.join(base_raw_path, "squat_bad_heel"),
+        "downdog": os.path.join(base_raw_path, "downdog"),
+        "tree": os.path.join(base_raw_path, "tree"),
+        "goddess": os.path.join(base_raw_path, "goddess"),
+        "plank": os.path.join(base_raw_path, "plank"),
+        "warrior2": os.path.join(base_raw_path, "warrior2"),
     }
     
     for label, folder_path in datasets.items():
@@ -42,7 +49,7 @@ def process_dataset():
             continue
             
         for img_path in glob.glob(os.path.join(folder_path, "*")):
-            if img_path.lower().endswith(('.png', '.jpg', '.jpeg')):
+            if img_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp')):
                 landmarks = extract_landmarks_from_image(img_path)
                 if landmarks:
                     data.append([label] + landmarks)
@@ -57,7 +64,9 @@ def process_dataset():
         columns.extend([f'x{i}', f'y{i}', f'z{i}', f'v{i}'])
         
     df = pd.DataFrame(data, columns=columns)
-    output_path = "/home/anurag/Desktop/your_gym_buddy/data/train_data.csv"
+    output_dir = os.path.join(project_root, "data", "processed")
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, "pose_data.csv")
     df.to_csv(output_path, index=False)
     print(f"Saved {len(df)} samples to {output_path}")
 

@@ -1,10 +1,10 @@
-import google.generativeai as genai
+from groq import Groq
 import os
 
 class FeedbackAgent:
     def __init__(self, api_key):
-        genai.configure(api_key=api_key)
-        self.model = genai.GenerativeModel('gemini-1.5-flash')
+        self.client = Groq(api_key=api_key)
+        self.model = "llama-3.3-70b-versatile"
         self.system_prompt = """
         You are a professional yoga and fitness instructor. 
         Your goal is to provide actionable, encouraging feedback based on the user's current posture state.
@@ -16,17 +16,25 @@ class FeedbackAgent:
         """
         state_packet: dict e.g., {"pose": "squat_bad_back", "knee_angle": 85, "back_angle": 30}
         """
-        prompt = f"{self.system_prompt}
-User State: {state_packet}
-Instruction:"
-        
         try:
-            response = self.model.generate_content(prompt)
-            return response.text.strip()
+            chat_completion = self.client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "system",
+                        "content": self.system_prompt,
+                    },
+                    {
+                        "role": "user",
+                        "content": f"User State: {state_packet}",
+                    }
+                ],
+                model=self.model,
+            )
+            return chat_completion.choices[0].message.content.strip()
         except Exception as e:
             return f"Keep it up! (Agent error: {str(e)})"
 
 if __name__ == "__main__":
-    API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_API_KEY")
+    API_KEY = os.getenv("GROQ_API_KEY", "YOUR_API_KEY")
     agent = FeedbackAgent(API_KEY)
     print(agent.get_feedback({"pose": "squat_bad_back", "knee_angle": 95}))

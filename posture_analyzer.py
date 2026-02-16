@@ -11,9 +11,10 @@ mp_pose = mp.solutions.pose
 mp_drawing = mp.solutions.drawing_utils
 pose_detector = mp_pose.Pose(min_detection_confidence=0.7, min_tracking_confidence=0.7)
 
-# Paths
-MODEL_PATH = "/home/anurag/Desktop/your_gym_buddy/models/pose_classifier.pkl"
-LE_PATH = "/home/anurag/Desktop/your_gym_buddy/models/label_encoder.pkl"
+# Get the project root directory
+project_root = os.path.dirname(os.path.abspath(__file__))
+MODEL_PATH = os.path.join(project_root, "models", "pose_classifier.pkl")
+LE_PATH = os.path.join(project_root, "models", "label_encoder.pkl")
 
 def calculate_angle(a, b, c):
     a, b, c = np.array(a), np.array(b), np.array(c)
@@ -26,14 +27,18 @@ class PostureAnalyzer:
         self.clf = None
         self.le = None
         if os.path.exists(MODEL_PATH) and os.path.exists(LE_PATH):
+            print(f"Loading model from {MODEL_PATH}...")
             with open(MODEL_PATH, 'rb') as f: self.clf = pickle.load(f)
             with open(LE_PATH, 'rb') as f: self.le = pickle.load(f)
+        else:
+            print("Model files not found. Please train the model first.")
         
         self.feedback_agent = FeedbackAgent(api_key)
         self.last_feedback_time = 0
         self.cooldown = 6 # seconds
 
     def run(self):
+        print("Starting camera feed... Press 'q' to quit.")
         cap = cv2.VideoCapture(0)
         while cap.isOpened():
             ret, frame = cap.read()
@@ -82,5 +87,5 @@ class PostureAnalyzer:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    API_KEY = os.getenv("GEMINI_API_KEY", "YOUR_API_KEY")
+    API_KEY = os.getenv("GROQ_API_KEY", "REMOVED_SECRET2o9lvbWnkQtceqUkGBuEWGdyb3FYbdn7s0OzVGIxL5tDjsfPgqpN")
     PostureAnalyzer(API_KEY).run()

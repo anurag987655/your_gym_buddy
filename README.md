@@ -1,11 +1,11 @@
 # Your Gym Buddy 🏋️‍♂️
 
-Your Gym Buddy is an AI-powered fitness instructor that uses computer vision to analyze your posture in real-time and provides encouraging, actionable feedback via an LLM (Gemini 1.5 Flash).
+Your Gym Buddy is an AI-powered fitness instructor that uses computer vision to analyze your posture in real-time and provides encouraging, actionable feedback via an LLM (Groq Llama 3.3).
 
 ## 🚀 Features
 - **Real-time Pose Classification**: Detects Squats, Tree Pose, and Downward Dog using MediaPipe.
 - **Form Analysis**: Calculates joint angles (e.g., knee and back angles for squats) to detect "Poor Form".
-- **AI Coaching**: Integrated with Gemini API to provide professional, concise fitness corrections (under 15 words).
+- **AI Coaching**: Integrated with Groq API to provide professional, concise fitness corrections (under 15 words).
 - **Customizable**: Pipeline for extracting landmarks from your own datasets and training custom models.
 
 ## 📁 Project Structure
@@ -16,7 +16,7 @@ your_gym_buddy/
 ├── scripts/
 │   ├── extract_landmarks.py  # MediaPipe landmark extraction
 │   ├── train_classifier.py   # Model training script
-│   └── feedback_agent.py     # Gemini LLM feedback logic
+│   └── feedback_agent.py     # Groq LLM feedback logic
 ├── posture_analyzer.py # Main real-time application
 ├── requirements.txt    # Project dependencies
 └── venv/               # Python virtual environment
@@ -44,9 +44,9 @@ python3 scripts/train_classifier.py
 ```
 
 ### 3. Run the Application
-Set your Gemini API key and launch the analyzer:
+Set your Groq API key and launch the analyzer:
 ```bash
-export GEMINI_API_KEY='your_gemini_api_key_here'
+export GROQ_API_KEY='your_groq_api_key_here'
 python3 posture_analyzer.py
 ```
 
