@@ -87,5 +87,7 @@ class PostureAnalyzer:
         cv2.destroyAllWindows()
 
 if __name__ == "__main__":
-    API_KEY = os.getenv("GROQ_API_KEY", "REMOVED_SECRET2o9lvbWnkQtceqUkGBuEWGdyb3FYbdn7s0OzVGIxL5tDjsfPgqpN")
+    API_KEY = os.getenv("GROQ_API_KEY")
+    if not API_KEY:
+        raise SystemExit("GROQ_API_KEY is not set. Export it before running.")
     PostureAnalyzer(API_KEY).run()

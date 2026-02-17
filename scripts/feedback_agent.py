@@ -35,6 +35,8 @@ class FeedbackAgent:
             return f"Keep it up! (Agent error: {str(e)})"
 
 if __name__ == "__main__":
-    API_KEY = os.getenv("GROQ_API_KEY", "YOUR_API_KEY")
+    API_KEY = os.getenv("GROQ_API_KEY")
+    if not API_KEY:
+        raise SystemExit("GROQ_API_KEY is not set. Export it before running.")
     agent = FeedbackAgent(API_KEY)
     print(agent.get_feedback({"pose": "squat_bad_back", "knee_angle": 95}))

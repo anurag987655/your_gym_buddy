@@ -4,3 +4,4 @@ __pycache__/
 *.pkl
 data/train_data.csv
 .env
+*.key
