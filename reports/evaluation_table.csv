@@ -1,0 +1,9 @@
+class,precision,recall,f1_score,support
+downdog,1.0,0.952,0.976,42
+goddess,0.939,0.939,0.939,49
+plank,0.896,0.938,0.916,64
+squat_bad_back,0.991,0.95,0.97,120
+squat_bad_heel,0.966,0.846,0.902,169
+squat_good,0.865,0.974,0.916,191
+tree,0.952,0.909,0.93,44
+warrior2,0.917,0.957,0.936,69

@@ -1,6 +1,7 @@
-from groq import Groq
-import os
 import json
+import os
+
+from groq import Groq
 
 
 def load_env_file(env_path):
@@ -23,51 +24,58 @@ def load_env_file(env_path):
 
 
 class FeedbackAgent:
-    def __init__(self, api_key):
-        self.client = Groq(api_key=api_key)
+    def __init__(self, api_key=None):
         self.model = "llama-3.3-70b-versatile"
+        self.client = Groq(api_key=api_key) if api_key else None
         self.system_prompt = (
             "You are a professional yoga and fitness instructor.\n"
-            "Return one concise coaching cue (max 15 words).\n"
-            "Use only the pose label and metrics in the state packet.\n"
-            "Prioritize safety-critical corrections first.\n"
-            "Never invent metrics that are not provided.\n"
-            "If state_packet.local_hint exists, refine it rather than changing topic."
+            "Rewrite the provided deterministic coaching cue in a concise, supportive tone.\n"
+            "Do not change the meaning, target body part, safety priority, or movement phase.\n"
+            "Return one line, max 15 words."
         )
 
     def get_feedback(self, state_packet):
-        """
-        state_packet: dict e.g., {"pose": "squat_bad_back", "knee_angle": 85, "local_hint": "..."}
-        """
+        deterministic_cue = state_packet.get("deterministic_cue") or state_packet.get("local_hint")
+        if not deterministic_cue:
+            return "Keep your form controlled and safe."
+
+        if not self.client:
+            return deterministic_cue
+
         try:
             chat_completion = self.client.chat.completions.create(
                 messages=[
-                    {
-                        "role": "system",
-                        "content": self.system_prompt,
-                    },
+                    {"role": "system", "content": self.system_prompt},
                     {
                         "role": "user",
-                        "content": f"User State JSON: {json.dumps(state_packet, ensure_ascii=True)}",
-                    }
+                        "content": (
+                            f"Deterministic cue: {deterministic_cue}\n"
+                            f"State JSON: {json.dumps(state_packet, ensure_ascii=True)}"
+                        ),
+                    },
                 ],
                 model=self.model,
-                temperature=0.2,
+                temperature=0.1,
                 max_tokens=40,
             )
-            return chat_completion.choices[0].message.content.strip()
-        except Exception as e:
-            local_hint = state_packet.get("local_hint")
-            if local_hint:
-                return local_hint
-            return f"Keep it up! (Agent error: {str(e)})"
+            text = chat_completion.choices[0].message.content.strip()
+            return text if text else deterministic_cue
+        except Exception:
+            return deterministic_cue
+
 
 if __name__ == "__main__":
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
     load_env_file(os.path.join(project_root, ".env"))
-    API_KEY = os.getenv("GROQ_API_KEY")
-    if not API_KEY:
-        raise SystemExit("GROQ_API_KEY is not set. Add it in .env or export it before running.")
-    agent = FeedbackAgent(API_KEY)
-    print(agent.get_feedback({"pose": "squat_bad_back", "knee_angle": 95}))
+    api_key = os.getenv("GROQ_API_KEY")
+    agent = FeedbackAgent(api_key)
+    print(
+        agent.get_feedback(
+            {
+                "pose": "squat_bad_back",
+                "knee_angle": 95,
+                "deterministic_cue": "Lift chest and brace core to keep a neutral spine.",
+            }
+        )
+    )
