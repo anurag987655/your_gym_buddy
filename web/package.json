@@ -1,0 +1,8 @@
+{
+  "name": "your-gym-buddy-web",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "sh -c 'npm --prefix server run dev & npm --prefix client run dev & wait'"
+  }
+}

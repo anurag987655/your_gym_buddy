@@ -52,3 +52,8 @@ python3 posture_analyzer.py
 - If key joints are not visible enough, coaching is gated to prevent wrong feedback.
 - Squat feedback is phase-specific (descent/bottom/ascent) instead of generic.
 - LLM output never replaces rule logic; it only rephrases the deterministic cue.
+
+## Web App (React + Node)
+- Frontend + API are in `web/client` and `web/server`.
+- The web flow lets users choose a target pose, capture a webcam frame, and receive feedback from the Python pose analyzer.
+- Setup/run instructions: see `web/README.md`.

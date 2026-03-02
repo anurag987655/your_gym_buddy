@@ -5,3 +5,8 @@ __pycache__/
 data/train_data.csv
 .env
 *.key
+
+# Web app
+web/server/node_modules/
+web/client/node_modules/
+web/client/dist/
