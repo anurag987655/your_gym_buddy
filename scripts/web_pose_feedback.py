@@ -46,38 +46,136 @@ def build_pose_hint(selected_pose, metrics):
     if pose == "squat":
         phase = _squat_phase(knee_angle)
         if phase in {"descent", "bottom"} and torso_lean > 0.23:
-            return "needs_adjustment", "Keep chest up and brace your core to avoid folding forward."
+            severity = min(1.0, (torso_lean - 0.23) / 0.18)
+            return {
+                "status": "needs_adjustment",
+                "issue": "squat_torso_fold",
+                "phase": phase,
+                "severity": severity,
+                "feedback": "Keep chest up and brace your core to avoid folding forward.",
+            }
         if phase == "bottom" and knee_angle > 112:
-            return "needs_adjustment", "Go a little deeper while keeping heels grounded and spine neutral."
+            severity = min(1.0, (knee_angle - 112) / 38)
+            return {
+                "status": "needs_adjustment",
+                "issue": "squat_shallow_depth",
+                "phase": phase,
+                "severity": severity,
+                "feedback": "Go a little deeper while keeping heels grounded and spine neutral.",
+            }
         if phase == "standing":
-            return "good", "Great setup. Start the squat by sending hips back and down with control."
-        return "good", "Solid squat pattern. Keep knees tracking over toes and push through mid-foot."
+            return {
+                "status": "good",
+                "issue": "squat_ready",
+                "phase": phase,
+                "severity": 0.0,
+                "feedback": "Great setup. Start the squat by sending hips back and down with control.",
+            }
+        return {
+            "status": "good",
+            "issue": "squat_stable",
+            "phase": phase,
+            "severity": 0.0,
+            "feedback": "Solid squat pattern. Keep knees tracking over toes and push through mid-foot.",
+        }
 
     if pose == "plank":
         if hip_height_delta > 0.07:
-            return "needs_adjustment", "Lift your hips slightly by squeezing glutes and core."
+            severity = min(1.0, (hip_height_delta - 0.07) / 0.16)
+            return {
+                "status": "needs_adjustment",
+                "issue": "plank_hips_low",
+                "phase": "hold",
+                "severity": severity,
+                "feedback": "Lift your hips slightly by squeezing glutes and core.",
+            }
         if hip_height_delta < -0.07:
-            return "needs_adjustment", "Lower hips a bit to align shoulders, hips, and ankles."
-        return "good", "Good plank line. Keep neck neutral and core tight."
+            severity = min(1.0, (abs(hip_height_delta) - 0.07) / 0.16)
+            return {
+                "status": "needs_adjustment",
+                "issue": "plank_hips_high",
+                "phase": "hold",
+                "severity": severity,
+                "feedback": "Lower hips a bit to align shoulders, hips, and ankles.",
+            }
+        return {
+            "status": "good",
+            "issue": "plank_stable",
+            "phase": "hold",
+            "severity": 0.0,
+            "feedback": "Good plank line. Keep neck neutral and core tight.",
+        }
 
     if pose == "downdog":
         if hip_height_delta > -0.05:
-            return "needs_adjustment", "Send hips up and back to lengthen your spine."
-        return "good", "Nice down dog shape. Press through palms and lengthen your back."
+            severity = min(1.0, (hip_height_delta + 0.05) / 0.18)
+            return {
+                "status": "needs_adjustment",
+                "issue": "downdog_hips_low",
+                "phase": "hold",
+                "severity": severity,
+                "feedback": "Send hips up and back to lengthen your spine.",
+            }
+        return {
+            "status": "good",
+            "issue": "downdog_stable",
+            "phase": "hold",
+            "severity": 0.0,
+            "feedback": "Nice down dog shape. Press through palms and lengthen your back.",
+        }
 
     if pose == "tree":
         if torso_lean > 0.10:
-            return "needs_adjustment", "Stack ribs over hips and fix your gaze for balance."
-        return "good", "Good tree pose balance. Keep hips level and breathe steadily."
+            severity = min(1.0, (torso_lean - 0.10) / 0.16)
+            return {
+                "status": "needs_adjustment",
+                "issue": "tree_torso_lean",
+                "phase": "hold",
+                "severity": severity,
+                "feedback": "Stack ribs over hips and fix your gaze for balance.",
+            }
+        return {
+            "status": "good",
+            "issue": "tree_stable",
+            "phase": "hold",
+            "severity": 0.0,
+            "feedback": "Good tree pose balance. Keep hips level and breathe steadily.",
+        }
 
     if pose in {"warrior2", "goddess"}:
         if knee_angle > 125:
-            return "needs_adjustment", "Bend your knee more and keep it tracking over toes."
+            severity = min(1.0, (knee_angle - 125) / 45)
+            return {
+                "status": "needs_adjustment",
+                "issue": f"{pose}_knee_bend",
+                "phase": "hold",
+                "severity": severity,
+                "feedback": "Bend your knee more and keep it tracking over toes.",
+            }
         if hip_angle < 145:
-            return "needs_adjustment", "Lift your torso taller and keep your chest open."
-        return "good", "Strong stance. Stay grounded through both feet."
+            severity = min(1.0, (145 - hip_angle) / 40)
+            return {
+                "status": "needs_adjustment",
+                "issue": f"{pose}_torso_collapsed",
+                "phase": "hold",
+                "severity": severity,
+                "feedback": "Lift your torso taller and keep your chest open.",
+            }
+        return {
+            "status": "good",
+            "issue": f"{pose}_stable",
+            "phase": "hold",
+            "severity": 0.0,
+            "feedback": "Strong stance. Stay grounded through both feet.",
+        }
 
-    return "good", "Good posture."
+    return {
+        "status": "good",
+        "issue": "posture_stable",
+        "phase": "hold",
+        "severity": 0.0,
+        "feedback": "Good posture.",
+    }
 
 
 def analyze_image(image_path, selected_pose, visibility_threshold=0.6):
@@ -137,13 +235,16 @@ def analyze_image(image_path, selected_pose, visibility_threshold=0.6):
         }
 
     _, metrics = compute_engineered_features(landmarks)
-    status, cue = build_pose_hint(selected_pose, metrics)
+    hint = build_pose_hint(selected_pose, metrics)
 
     return {
         "success": True,
         "pose": selected_pose,
-        "status": status,
-        "feedback": cue,
+        "status": hint["status"],
+        "issue": hint["issue"],
+        "phase": hint["phase"],
+        "severity": round(hint["severity"], 3),
+        "feedback": hint["feedback"],
         "metrics": {
             "knee_angle": round(metrics["knee_angle"], 1),
             "hip_angle": round(metrics["hip_angle"], 1),
