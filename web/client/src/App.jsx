@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import axios from 'axios';
+import { FilesetResolver, PoseLandmarker } from '@mediapipe/tasks-vision';
 
 const POSES = [
   { value: 'squat', label: 'Squat' },
@@ -7,7 +8,8 @@ const POSES = [
   { value: 'downdog', label: 'Downward Dog' },
   { value: 'tree', label: 'Tree' },
   { value: 'warrior2', label: 'Warrior II' },
-  { value: 'goddess', label: 'Goddess' }
+  { value: 'goddess', label: 'Goddess' },
+  { value: 'sitting', label: '🪑 Sitting Posture' },
 ];
 
 const INTERVAL_OPTIONS = [
@@ -16,8 +18,6 @@ const INTERVAL_OPTIONS = [
   { value: 1800, label: 'Light (1.8s)' }
 ];
 
-const CAPTURE_MAX_WIDTH = 512;
-const CAPTURE_JPEG_QUALITY = 0.65;
 const VOICE_COOLDOWN_MS = 6500;
 const STABILITY_WINDOW = 5;
 const STABILITY_REQUIRED = 3;
@@ -30,11 +30,15 @@ function formatDuration(totalSeconds) {
 
 export default function App() {
   const videoRef = useRef(null);
-  const canvasRef = useRef(null);
+  const poseLandmarkerRef = useRef(null);
   const selectedPoseRef = useRef('squat');
   const lastSpokenRef = useRef({ text: '', at: 0 });
   const feedbackWindowRef = useRef([]);
   const squatTrackerRef = useRef({ seenBottom: false, lastPhase: '', lastRepAt: 0 });
+
+  const lastUpdatedRef = useRef('');
+  const feedbackRef = useRef(null);
+  const metricsRef = useRef(null);
 
   const [selectedPose, setSelectedPose] = useState('squat');
   const [intervalMs, setIntervalMs] = useState(1200);
@@ -57,8 +61,28 @@ export default function App() {
   }, [selectedPose]);
 
   useEffect(() => {
-    let stream;
+    async function initMediaPipe() {
+      try {
+        const vision = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        );
+        const landmarker = await PoseLandmarker.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task',
+            delegate: 'GPU'
+          },
+          runningMode: 'VIDEO',
+          numPoses: 1
+        });
+        poseLandmarkerRef.current = landmarker;
+      } catch (err) {
+        setError('Failed to initialize MediaPipe: ' + err.message);
+      }
+    }
+    
+    initMediaPipe();
 
+    let stream;
     async function initCamera() {
       try {
         stream = await navigator.mediaDevices.getUserMedia({
@@ -199,11 +223,13 @@ export default function App() {
     setPoseSeconds(0);
     setSquatReps(0);
     setPoseDetected(false);
+    feedbackRef.current = null;
+    metricsRef.current = null;
     squatTrackerRef.current = { seenBottom: false, lastPhase: '', lastRepAt: 0 };
   }
 
   async function analyzeFrame() {
-    if (!videoRef.current || !canvasRef.current || loading) {
+    if (!videoRef.current || loading) {
       return;
     }
 
@@ -211,40 +237,41 @@ export default function App() {
     setError('');
 
     try {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      const sourceWidth = video.videoWidth || 640;
-      const sourceHeight = video.videoHeight || 480;
-      const scale = Math.min(1, CAPTURE_MAX_WIDTH / sourceWidth);
-      const width = Math.round(sourceWidth * scale);
-      const height = Math.round(sourceHeight * scale);
-
-      canvas.width = width;
-      canvas.height = height;
-
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(video, 0, 0, width, height);
-
-      const blob = await new Promise((resolve) => {
-        canvas.toBlob(resolve, 'image/jpeg', CAPTURE_JPEG_QUALITY);
-      });
-
-      if (!blob) {
-        throw new Error('Failed to capture image');
+      // Landmark-based flow for ALL poses
+      if (!poseLandmarkerRef.current) {
+        setError('MediaPipe is still loading...');
+        return;
       }
 
-      const formData = new FormData();
-      formData.append('frame', blob, 'frame.jpg');
-      formData.append('selectedPose', selectedPoseRef.current);
+      const video = videoRef.current;
+      const startTimeMs = performance.now();
+      const results = poseLandmarkerRef.current.detectForVideo(video, startTimeMs);
 
-      const { data } = await axios.post('/api/analyze', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+      let landmarks = [];
+      if (results.landmarks && results.landmarks.length > 0) {
+        landmarks = results.landmarks[0];
+      }
+
+      const payload = {
+        selectedPose: selectedPoseRef.current,
+        landmarks: landmarks,
+        previousFeedback: feedbackRef.current?.feedback,
+        previousMetrics: metricsRef.current
+      };
+
+      const { data } = await axios.post('/api/analyze', payload, {
+        headers: { 'Content-Type': 'application/json' }
       });
 
       setLastUpdated(new Date().toLocaleTimeString());
+      
+      // Update stats (including rep counting for squats)
       updateWorkoutStats(data);
+      
       if (acceptStableFeedback(data)) {
         setFeedback(data);
+        feedbackRef.current = data;
+        metricsRef.current = data.metrics;
       }
     } catch (err) {
       const message = err.response?.data?.detail || err.response?.data?.error || err.message;
@@ -301,6 +328,8 @@ export default function App() {
     setStabilityMessage('');
     setPoseSeconds(0);
     setPoseDetected(false);
+    feedbackRef.current = null;
+    metricsRef.current = null;
     squatTrackerRef.current = { seenBottom: false, lastPhase: '', lastRepAt: 0 };
     lastSpokenRef.current = { text: '', at: 0 };
     if ('speechSynthesis' in window) {
@@ -382,7 +411,6 @@ export default function App() {
 
           <div className="video-wrap">
             <video ref={videoRef} autoPlay playsInline muted />
-            <canvas ref={canvasRef} className="hidden-canvas" />
             {!cameraReady && <div className="overlay">Waiting for camera...</div>}
           </div>
         </section>
@@ -422,22 +450,30 @@ export default function App() {
               <p className="tip">{feedback.feedback}</p>
 
               <div className="metrics">
-                <p>
-                  <span>Knee Angle</span>
-                  <strong>{feedback.metrics?.knee_angle ?? '-'} deg</strong>
-                </p>
-                <p>
-                  <span>Hip Angle</span>
-                  <strong>{feedback.metrics?.hip_angle ?? '-'} deg</strong>
-                </p>
-                <p>
-                  <span>Torso Lean</span>
-                  <strong>{feedback.metrics?.torso_lean ?? '-'}</strong>
-                </p>
-                <p>
-                  <span>Visible Side</span>
-                  <strong>{feedback.metrics?.side ?? '-'}</strong>
-                </p>
+                {feedback.metrics?.knee_angle && (
+                  <p>
+                    <span>Knee Angle</span>
+                    <strong>{feedback.metrics.knee_angle} deg</strong>
+                  </p>
+                )}
+                {feedback.metrics?.hip_angle && (
+                  <p>
+                    <span>Hip Angle</span>
+                    <strong>{feedback.metrics.hip_angle} deg</strong>
+                  </p>
+                )}
+                {feedback.metrics?.torso_lean && (
+                  <p>
+                    <span>Torso Lean</span>
+                    <strong>{feedback.metrics.torso_lean}</strong>
+                  </p>
+                )}
+                {feedback.metrics?.side && (
+                  <p>
+                    <span>Visible Side</span>
+                    <strong>{feedback.metrics.side}</strong>
+                  </p>
+                )}
                 <p>
                   <span>Visibility</span>
                   <strong>{feedback.visibility?.score ?? '-'}</strong>
@@ -446,10 +482,18 @@ export default function App() {
                   <span>Issue</span>
                   <strong>{feedback.issue ?? feedback.error ?? '-'}</strong>
                 </p>
-                <p>
-                  <span>Phase</span>
-                  <strong>{feedback.phase ?? '-'}</strong>
-                </p>
+                {feedback.phase && (
+                  <p>
+                    <span>Phase</span>
+                    <strong>{feedback.phase}</strong>
+                  </p>
+                )}
+                {feedback.source && (
+                  <p>
+                    <span>Logic Source</span>
+                    <strong>{feedback.source}</strong>
+                  </p>
+                )}
                 <p>
                   <span>Updated</span>
                   <strong>{lastUpdated || '-'}</strong>
