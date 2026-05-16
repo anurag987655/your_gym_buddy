@@ -268,7 +268,28 @@ These limitations are expected for a webcam-based prototype and create clear dir
 
 ---
 
-## 13. Future Improvements
+## 13. Challenges Encountered
+
+Several technical and practical challenges were encountered during the development of Your Gym Buddy.
+
+| Challenge | How it was addressed |
+|---|---|
+| Inconsistent landmark visibility | The system uses visibility gates and blocks feedback when important joints are unclear. |
+| Camera-angle sensitivity | Feedback is limited to visible 2D posture patterns instead of making unsafe assumptions about depth. |
+| Noisy single-frame predictions | A rolling stability gate was added so the same issue must appear repeatedly before feedback is accepted. |
+| Real-time latency | Webcam frames are resized and compressed before upload to reduce payload size and improve responsiveness. |
+| Dataset imbalance | The training pipeline uses class balancing so smaller classes are not ignored by the classifier. |
+| Squat rep counting | A simple phase-based tracker counts reps only after detecting a bottom-to-standing transition. |
+| Voice cue repetition | Voice cues are optional, correction-only, and controlled by a cooldown to avoid distracting the user. |
+| Explaining model decisions | Engineered features such as knee angle, hip angle, torso lean, and visibility score are exposed in the UI and report. |
+
+One of the biggest challenges was ensuring that the system did not give feedback when the camera view was poor. Many images can contain a person but still have unclear knees, ankles, or hips. In those cases, the project intentionally returns messages such as “Low landmark confidence” instead of giving a posture correction. This improves safety and makes the system more defensible.
+
+Another challenge was balancing real-time behavior with reliability. If every frame is used directly, the app can flicker between different cues. To solve this, the frontend waits for repeated evidence before showing or speaking a correction. This makes the user experience calmer and closer to how a coach would give feedback.
+
+---
+
+## 14. Future Improvements
 
 The most valuable next steps are:
 
@@ -292,7 +313,7 @@ The most valuable next steps are:
 
 ---
 
-## 14. Defense Talking Points
+## 15. Defense Talking Points
 
 If asked why this approach is suitable:
 
@@ -312,7 +333,7 @@ If asked about reliability:
 
 ---
 
-## 15. References
+## 16. References
 
 [1] A. Toshev and C. Szegedy, “DeepPose: Human Pose Estimation via Deep Neural Networks,” *Proceedings of the IEEE Conference on Computer Vision and Pattern Recognition (CVPR)*, pp. 1653-1660, 2014. DOI: 10.1109/CVPR.2014.214. Available: https://www.cv-foundation.org/openaccess/content_cvpr_2014/papers/Toshev_DeepPose_Human_Pose_2014_CVPR_paper.pdf
 
@@ -356,7 +377,7 @@ If asked about reliability:
 
 ---
 
-## 16. Conclusion
+## 17. Conclusion
 
 Your Gym Buddy demonstrates a complete posture coaching pipeline: webcam capture, pose landmark extraction, engineered feature generation, machine learning classification, deterministic feedback, voice cues, and workout tracking.
 
