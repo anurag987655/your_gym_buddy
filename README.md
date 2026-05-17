@@ -225,18 +225,6 @@ Main defense report:
 report.md
 ```
 
-Shorter final report draft, if present:
-
-```text
-final_report.md
-```
-
-Generated visual assets are stored in:
-
-```text
-reports/
-```
-
 ## Runtime Notes
 
 - The current web app uses browser-side MediaPipe and sends landmarks, not image files.
