@@ -165,25 +165,45 @@ reports/figure_confusion_matrix.png
 reports/figure_system_pipeline.png
 ```
 
-## Command-Line Demo Commands
+## Demo Checklist
 
-The current web backend uses landmark JSON. For image-file demos, use specialist scripts that still support `--image`.
+The current web backend expects browser-generated landmark JSON, so the most reliable demo is the web app rather than an image-file CLI command.
 
-Working squat correction example:
+1. Start the app:
+
+   ```bash
+   cd ~/Desktop/your_gym_buddy/web
+   npm run dev
+   ```
+
+2. Open:
+
+   ```text
+   http://localhost:5173/
+   ```
+
+3. In the browser:
+
+   - Choose a target pose.
+   - Click `Start Real-Time Coach`.
+   - Stand fully in frame.
+   - Show feedback changing between `Good Form`, `Needs Adjustment`, and camera/visibility guidance.
+   - Point out workout time, pose hold time, squat reps, and optional voice cues.
+
+4. To demonstrate safety gating, partially hide important joints or move out of frame. The app should avoid confident form feedback when the body landmarks are unclear.
+
+Backend health can be checked separately:
 
 ```bash
-cd ~/Desktop/your_gym_buddy
-IMG=data/raw/squat_bad_back/frame_338.jpg; venv/bin/python scripts/squat_analysis.py --image "$IMG" --pose squat
+cd ~/Desktop/your_gym_buddy/web
+npm run dev
 ```
 
-Working sitting/image examples require a valid sitting image dataset if present:
+Then open:
 
-```bash
-cd ~/Desktop/your_gym_buddy
-venv/bin/python scripts/sitting_pose.py --image "path/to/sitting_image.jpg"
+```text
+http://localhost:4000/api/health
 ```
-
-Safety-gate behavior can also be demonstrated through the web app by moving partly out of frame or hiding important joints.
 
 ## Desktop Analyzer
 
